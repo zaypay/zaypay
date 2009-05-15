@@ -6,5 +6,6 @@ if File.exists? zaypay_config_target
   puts "You've already got config/zaypay.yml. We're keeping that."
 else
   puts "Copying an example config-file to config/zaypay.yml"
-  File.copy zaypay_config_source, zaypay_config_target
+  FileUtils.cp zaypay_config_source, zaypay_config_target
 end
+puts 'Check out the README file to get started'

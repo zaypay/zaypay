@@ -8,9 +8,19 @@ sudo gem install httparty
 
 This plugin allows you to perform all API-methods Zaypay supports with minimal effort. You will need a zaypay
 account which is available for free by registering (http://zaypay.com). This Ruby on Rails plugin can be installed
-by issueing from the root of your application:
+by issueing from the root of your application: (be on rails >=2.1)
 
 script/plugin install git://github.com/zaypay/zaypay.git
+
+If you're on old rails this might work for you:
+
+script/plugin install http://github.com/zaypay/zaypay.git
+
+However you might then want to rename the plugin directory from zaypay.git to zaypay
+
+You can also just grab the tarball: http://github.com/zaypay/zaypay/tarball/master
+or the zipball:  http://github.com/zaypay/zaypay/zipball/master
+Run the install hook by hand when using the tarball-approach
 
 Example Project
 ===============

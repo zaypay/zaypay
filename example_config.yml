@@ -1,0 +1,10 @@
+# This is the file where you can store your Price Setting id along
+# with API-key. Specify a default if you want the Zaypay::PriceSetting constructor
+# to auto select a Price Setting. Check the README in the plugin-dir for more on this
+#
+# Obviously, this is just bogus-data to show you the format of the YAML-file
+# Uncomment and replace it with your real data
+#
+# 15347: b483bc8fga615234567890abcdef1234
+# 22354: d667e98cf96a6829e72d0f3b2e5bf764
+# default: 15347

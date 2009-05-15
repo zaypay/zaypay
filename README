@@ -1,0 +1,202 @@
+Zaypay Payment API RoR Plugin
+=============================
+
+This Ruby on Rails plugin let's you interface with the Zaypay payment API easily. It relies upon the gem HTTParty 
+to do the HTTP-part. Install the gem like this: 
+
+sudo gem install httparty
+
+This plugin allows you to perform all API-methods Zaypay supports with minimal effort. You will need a zaypay
+account which is available for free by registering (http://zaypay.com). This Ruby on Rails plugin can be installed
+by issueing from the root of your application:
+
+script/plugin install git://github.com/zaypay/zaypay.git
+
+Example Project
+===============
+
+You can download an example project from http://zaypay.com/public/en/docs/api_integration_guide consisting of a 
+simple payment-dialogue rails 2.2 application, that uses this plugin. You'll probably want to check that out and 
+steal from it as much as you can. Go right ahead!
+
+Price Settings
+==============
+
+The Zaypay API works with so-called Price Settings. These are items you can create on http://zaypay.com that define
+what payment-methods and countries you wish to support, and what prices you allow. Price Settings can be in a few 
+modes: Super Easy, Easy and Full Control. In Super Easy and Easy you set a price to 'aim' at but this price can
+be overidden dynamically through the API (and as such, through this plugin). In Full Controll all is configured
+from the site and amounts can not be overidden. 
+
+Price Settings have an 'id' and an 'api-key'. The latter is only known to you and should remain as such.
+When you installed this plugin we put a file in config/zaypay.yml. If you haven't edited it, it looks like this:
+
+# 15347: b483bc8fga615234567890abcdef1234
+# 22354: d667e98cf96a6829e72d0f3b2e5bf764
+# default: 15347
+
+You can uncomment it and change the short number to match the id of your price setting, and long one to match the
+corresponding API key. You can list all your Price Settings you want to use with the plugin here, and even select
+a default one be editing the last line in the file. This file should (remain to) be correct YAML format.
+
+Price Setting Object
+====================
+
+This plugin provides the class Zaypay::PriceSetting where all the goodness happens. We'll demonstrate how easy this
+works by putting showing some irb-sessions where we do it. You instantiate it like this:
+
+>> price_setting = Zaypay::PriceSetting.new
+=> #<Zaypay::PriceSetting:0x22a65b4 @key="b483bc8fga615234567890abcdef1234", @price_setting_id=15347>
+
+As you can see, this selects the default price-setting from the config-file. We can also force it use another:
+
+>> price_setting = Zaypay::PriceSetting.new(22354)
+=> #<Zaypay::PriceSetting:0x22a65b4 @key="d667e98cf96a6829e72d0f3b2e5bf764", @price_setting_id=22354>
+
+Or specify both the id and the key (it won't even look for the config-file in that case):
+
+>> price_setting = Zaypay::PriceSetting.new(34567,"829e72d0f3b2e5bf764d667e98cf96a6")
+=> #<Zaypay::PriceSetting:0x22a65b4 @key="829e72d0f3b2e5bf764d667e98cf96a6", @price_setting_id=34567>
+
+Please note, we'll be using that local 'price_setting' variable throughout the example. 
+
+Api Methods
+===========
+
+All API Methods are called on this object. The object will connect to https://secure.zaypay.com and make all the
+right moves to trigger the desired method. It will then return the methods output in nice easily usable rubyesque
+format or raise a Zaypay::Error if something goes terribly wrong.
+
+API Method: locale_for_ip(ip)
+=============================
+
+You will probably want to know your customers location so you can provide him with a preselected country and
+language further down the road. This is what the locale_for_ip method is for, just let Zaypay handle the lookup.
+Please note, a 'locale' is a combination of a language and a country.
+
+>> price_setting.locale_for_ip('82.170.248.207')
+=> {:language=>"nl", :country=>"NL"}
+
+API Method: list_locales(optional_amount)
+=========================================
+
+You have configured the countries you need to support in your Price Setting on zaypay.com, but you need an easy way
+to show all supported countries to your customer. Let a Price setting list it's supported locales in two easy arrays:
+
+>> price_setting.list_locales
+{:languages=>
+  [{"native_name"=>"français", "code"=>"fr", "english_name"=>"French"},
+   {"native_name"=>"Nederlands", "code"=>"nl", "english_name"=>"Dutch"},
+   {"native_name"=>"English", "code"=>"en", "english_name"=>"English"}],
+ :countries=>
+  [{"name"=>"Australia", "code"=>"AU"},
+   {"name"=>"Austria", "code"=>"AT"},
+   ...
+   ...
+   {"name"=>"United Kingdom", "code"=>"GB"},
+   {"name"=>"United States of America", "code"=>"US"}]}
+
+There you go, fill those dropdowns! (and use the values from locale_for_ip as defaults)
+If you use dynamic amounts, specify the 'optional_amount' and only the countries will be shown that can 
+support that amount.
+
+API Method: list_payment_methods(locale, optional_amount)
+=========================================================
+
+Your customer has selected his or her country (or probably we got it right by default), so we want to list
+all payment methods for that locale.
+
+>> price_setting.list_payment_methods('nl-NL')
+{:payment_methods=>
+  [{"charged_amount"=>#<BigDecimal:243e5e8,'0.8E0',4(8)>,
+    "name"=>"phone",
+    "payment_method_id"=>1,
+    "very_short_instructions"=>"betaal per telefoon",
+    "very_short_instructions_with_amount"=>"betaal € 0,80 per telefoon",
+    "eur_charged_amount"=>#<BigDecimal:243e200,'0.8E0',4(8)>,
+    "formatted_amount"=>"€ 0,80",
+    "payout"=>
+     #<BigDecimal:243dfa8,'0.5599999999 9999999999 9999999999 8E0',32(36)>},
+   {"charged_amount"=>#<BigDecimal:243db70,'0.8E0',4(8)>,
+    "name"=>"sms",
+    "payment_method_id"=>2,
+    "very_short_instructions"=>"betaal per sms",
+    "very_short_instructions_with_amount"=>"betaal € 0,80 per sms",
+    "eur_charged_amount"=>#<BigDecimal:243d788,'0.8E0',4(8)>,
+    "formatted_amount"=>"€ 0,80",
+    "payout"=>#<BigDecimal:243d38c,'0.26E0',4(8)>}]}
+
+This hash can easily be traversed to build a piece of interface that allows your customer to select
+the desired payment method. Please note the translated(!) instructions you can use here. Again note
+the optional_amount that can be used to handle dynamic amounts.
+
+API Method: create_payment(locale, payment_method_id, optional_amount)
+======================================================================
+
+So, we know where our customer is located, and what payment method is desired. Let's say it's by sms/text.
+so we provide payment_method_id 2 to the method. That will prepare a payment and return a hash with two
+keys, :payment containing a hash with all sort of useful payment details and the key :instructions where
+you can again find translated instructions in a variety of forms.
+
+>> price_setting.create_payment('nl-NL',2)
+{:payment=>
+  {:platform=>"sms",
+   :locale=>"nl-NL",
+   :payload_provided=>false,
+   :currency=>"EUR",
+   :formatted_number=>"3111",
+   :amount_euro=>0.8,
+   :verification_needed=>false,
+   :status=>"prepared",
+   :human_platform=>"sms",
+   :created_at=>Thu May 14 15:59:15 UTC 2009,
+   :customer_mo_message=>"unknown",
+   :keyword=>"PAY",
+   :paycode=>"0284",
+   :total_payout=>#<BigDecimal:241bcf0,'0.26E0',4(8)>,
+   :customer_phone_number_hash=>"unknown",
+   :number=>"3111",
+   :messages_left_to_be_sent=>2,
+   :id=>25504212,
+   :messages_to_be_sent=>2,
+   :total_amount=>#<BigDecimal:241c164,'0.8E0',4(8)>,
+   :payment_method_id=>2,
+   :partly_customer_phone_number=>"unknown"},
+ :instructions=>
+  {:short_instructions=>"SMS de tekst PAY 0284 naar nummer 3111.",
+   :status_string=>"Uw betaling is voorbereid",
+   :very_short_instructions=>"betaal per sms",
+   :very_short_instructions_with_amount=>"betaal € 0,80 per sms",
+   :long_instructions=>
+    "SMS alstublieft de tekst PAY 0284 naar telefoonnummer 3111. U zult 2 berichten ontvangen. Hiermee heeft u \
+    dan € 0,80 betaald. Verder betaalt u zelf het normale tarief voor het versturen van één SMSje."}}
+
+API Method: show_payment(payment_id)
+====================================
+
+A payment that is already in existence can be fetched with this method. It will return the same information
+as create_payment does. However if the payment is no 'live' status no instructions are provided as there
+is no way for your customer to interact with this payment. This happens when it becomes 'paid' for instance,
+or when it expires because your customer decided not to pay after all.
+
+API Method: verification_code(payment, verification_code)
+=========================================================
+
+In some countries (like the USA) we send your customer a verification code in the final (premium) message.
+The need for this is indicated by the :verification_needed flag you get in every payment-hash. You show
+the customer a form where this code can be entered, and when you receive it, you use this method to put
+it through to us. If the code is correct, the payment goes :paid (your customer gets 3 attempts). This
+method will apply the code to the payment and return the same info as create_payment or show_payment does.
+
+Api Method: mark_payload_provided(payment)
+==========================================
+
+You might find helpful to know that you can store weather the product has been provided for a payment in
+our database. When the product is provided, you hit this method. That flips the boolean :payload_provided
+that you get in every payment-hash. This way you'll never provide the product twice, without you needing
+to keep track of the payments "on your side". Again returns the same as create_payment or show_payment does.
+
+
+You can find in-depth docs of the API here: http://zaypay.com/public/en/docs/api_integration_guide
+
+Copyright (c) 2009 Zaypay International BV, released under the MIT license
